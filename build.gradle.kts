@@ -46,13 +46,13 @@ kotlin {
         }
     }
 
-//    ios()
+    ios()
 //    watchos()
 //    tvos()
 //
 //    mingwX64()
-//    macosX64()
-//    macosArm64()
+    macosX64()
+    macosArm64()
 //    linuxX64()
 //    linuxArm64()
 

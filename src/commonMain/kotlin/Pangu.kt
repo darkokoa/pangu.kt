@@ -14,7 +14,7 @@ private val CJK_QUOTE = Regex(CJK.pattern + QUOTE.pattern)
 
 private val QUOTE_CJK = Regex(QUOTE.pattern + CJK.pattern)
 
-private val FIX_QUOTE = Regex("([\"'])(\\s*)(.+?)(\\s*)([\"'])")
+private val FIX_QUOTE = Regex(QUOTE.pattern + "(\\s*) (.+?)(\\s*)" + QUOTE.pattern)
 
 private val CJK_BRACKET_CJK = Regex(CJK.pattern + "([({\\[]+(.*?)[)}\\]]+)" + CJK.pattern)
 
