@@ -1,12 +1,7 @@
-import dev.ryz3n.pangu.toSpacingText
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
-class PanguTest {
-
-    private fun assertEqualsSpacingText(input: String, expected: String) {
-        return assertEquals(expected, input.toSpacingText())
-    }
+// tests from https://github.com/vinta/pangu.java/blob/master/src/test/java/ws/vinta/pangu/PanguTest.java
+class PanguJvmTest {
 
     @Test
     fun testSpacingText() {
