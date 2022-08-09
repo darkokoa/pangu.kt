@@ -1,6 +1,7 @@
 import kotlin.test.Test
 
 // tests from https://github.com/vinta/pangu.java/blob/master/src/test/java/ws/vinta/pangu/PanguTest.java
+@Deprecated("PanguJsTest.kt has more test cases")
 class PanguJvmTest {
 
     @Test

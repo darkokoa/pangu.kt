@@ -191,7 +191,7 @@ class PanguJsTest {
 
     @Test
     fun handleDoubleReverseSolidus() { // \u005C
-        assertEqualsSpacingText("前面\\\\後面", "前面\\\\後面")
+        assertEqualsSpacingText("前面\\\\後面", "前面 \\\\ 後面")
         assertEqualsSpacingText("前面 \\\\ 後面", "前面 \\\\ 後面")
     }
 
@@ -263,7 +263,7 @@ class PanguJsTest {
     @Test
     fun handleHorizontalEllipsis() { // \u2026
         assertEqualsSpacingText("前面…後面", "前面… 後面")
-        assertEqualsSpacingText("前面 …… 後面", "前面…… 後面")
+        assertEqualsSpacingText("前面……後面", "前面…… 後面")
     }
 
     @Test
