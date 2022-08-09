@@ -79,13 +79,13 @@ private val MIDDLE_DOT = Regex("( *)([\u00b7\u2022\u2027])( *)")
 
 @Suppress("ObjectPropertyName")
 private val _convertToFullWidthKVs = mapOf(
-    Regex("~") to "～",
-    Regex("!") to "！",
-    Regex(";") to "；",
-    Regex(":") to "：",
-    Regex(",") to "，",
-    Regex(DOT) to "。",
-    Regex("\\?") to "？",
+    Regex(pattern = "~") to "～",
+    Regex(pattern = "!") to "！",
+    Regex(pattern = ";") to "；",
+    Regex(pattern = ":") to "：",
+    Regex(pattern = ",") to "，",
+    Regex(pattern = DOT) to "。",
+    Regex(pattern = "\\?") to "？",
 )
 
 private fun String.convertSomeSignsToFullWidth(): String {
