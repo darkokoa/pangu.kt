@@ -97,7 +97,7 @@ private fun String.convertSomeSignsToFullWidth(): String {
     return convertText
 }
 
-public fun String.toSpacingText(): String {
+public fun String.spacingText(): String {
 
     if (this.length <= 1 || !ANY_CJK.containsMatchIn(this)) return this
 
