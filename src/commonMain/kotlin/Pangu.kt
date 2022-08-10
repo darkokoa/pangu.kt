@@ -1,4 +1,4 @@
-package dev.ryz3n.pangu
+package dev.darkokoa.pangu
 
 /**
  *

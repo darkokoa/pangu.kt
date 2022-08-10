@@ -2,7 +2,7 @@ plugins {
     kotlin("multiplatform") version "1.7.10"
 }
 
-//group = "dev.ryz3n"
+//group = "dev.darkokoa"
 //version = "1.0-SNAPSHOT"
 
 plugins.withType<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin> {
