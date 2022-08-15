@@ -362,3 +362,6 @@ gradle-app.setting
 # Kotlin MPP Auto Generated File
 karma.config.d
 kotlin-js-store
+
+# Secret File
+secret
