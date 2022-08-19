@@ -3,7 +3,7 @@
 import kotlin.test.Test
 
 // tests from https://github.com/vinta/pangu.js/blob/master/test/shared/test_core.js
-class PanguJsTest {
+class PanguTest {
 
     @Test
     fun ignoreLowLine() { // \u005F

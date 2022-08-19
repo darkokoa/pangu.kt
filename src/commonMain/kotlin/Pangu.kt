@@ -97,77 +97,80 @@ private fun String.convertSomeSignsToFullWidth(): String {
     return convertText
 }
 
-public fun String.spacingText(): String {
+public object Pangu {
+    public fun spacingText(text: String): String {
+        if (text.length <= 1 || !ANY_CJK.containsMatchIn(text)) return text
 
-    if (this.length <= 1 || !ANY_CJK.containsMatchIn(this)) return this
+        var newText = StringBuilder(text).toString()
 
-    var newText = StringBuilder(this).toString()
+        newText = newText.replace(CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS_CJK) {
+//            val match = it.groupValues[0]
+            val leftCjk = it.groupValues[1]
+            val symbols = it.groupValues[2]
+            val rightCjk = it.groupValues[3]
 
-    newText = newText.replace(CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS_CJK) {
-//        val match = it.groupValues[0]
-        val leftCjk = it.groupValues[1]
-        val symbols = it.groupValues[2]
-        val rightCjk = it.groupValues[3]
+            val fullWidthSymbols = symbols.convertSomeSignsToFullWidth()
 
-        val fullWidthSymbols = symbols.convertSomeSignsToFullWidth()
-
-        buildString {
-            append(leftCjk)
-            append(fullWidthSymbols)
-            append(rightCjk)
+            buildString {
+                append(leftCjk)
+                append(fullWidthSymbols)
+                append(rightCjk)
+            }
         }
-    }
 
-    newText = newText.replace(CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS) {
-//        val match = it.groupValues[0]
-        val cjk = it.groupValues[1]
-        val symbols = it.groupValues[2]
+        newText = newText.replace(CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS) {
+//            val match = it.groupValues[0]
+            val cjk = it.groupValues[1]
+            val symbols = it.groupValues[2]
 
-        val fullWidthSymbols = symbols.convertSomeSignsToFullWidth()
+            val fullWidthSymbols = symbols.convertSomeSignsToFullWidth()
 
-        buildString {
-            append(cjk)
-            append(fullWidthSymbols)
+            buildString {
+                append(cjk)
+                append(fullWidthSymbols)
+            }
         }
+
+        newText = newText
+            .replace(DOTS_CJK, "$1 $2")
+            .replace(FIX_CJK_COLON_ANS, "$1：$2")
+
+            .replace(CJK_QUOTE, "$1 $2")
+            .replace(QUOTE_CJK, "$1 $2")
+            .replace(FIX_QUOTE_ANY_QUOTE, "$1$2$3")
+
+            .replace(CJK_SINGLE_QUOTE_BUT_POSSESSIVE, "$1 $2")
+            .replace(SINGLE_QUOTE_CJK, "$1 $2")
+            .replace(FIX_POSSESSIVE_SINGLE_QUOTE, "$1's") // eslint-disable-line quotes
+
+            .replace(HASH_ANS_CJK_HASH, "$1 $2$3$4 $5")
+            .replace(CJK_HASH, "$1 $2")
+            .replace(HASH_CJK, "$1 $3")
+
+            .replace(CJK_OPERATOR_ANS, "$1 $2 $3")
+            .replace(ANS_OPERATOR_CJK, "$1 $2 $3")
+
+            .replace(FIX_SLASH_AS, "$1$2")
+            .replace(FIX_SLASH_AS_SLASH, "$1$2$3")
+
+            .replace(CJK_LEFT_BRACKET, "$1 $2")
+            .replace(RIGHT_BRACKET_CJK, "$1 $2")
+            .replace(FIX_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1$2$3")
+            .replace(ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1 $2$3$4")
+            .replace(LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK, "$1$2$3 $4")
+
+            .replace(AN_LEFT_BRACKET, "$1 $2")
+            .replace(RIGHT_BRACKET_AN, "$1 $2")
+
+            .replace(CJK_ANS, "$1 $2")
+            .replace(ANS_CJK, "$1 $2")
+
+            .replace(S_A, "$1 $2")
+
+            .replace(MIDDLE_DOT, "・")
+
+        return newText
     }
-
-    newText = newText
-        .replace(DOTS_CJK, "$1 $2")
-        .replace(FIX_CJK_COLON_ANS, "$1：$2")
-
-        .replace(CJK_QUOTE, "$1 $2")
-        .replace(QUOTE_CJK, "$1 $2")
-        .replace(FIX_QUOTE_ANY_QUOTE, "$1$2$3")
-
-        .replace(CJK_SINGLE_QUOTE_BUT_POSSESSIVE, "$1 $2")
-        .replace(SINGLE_QUOTE_CJK, "$1 $2")
-        .replace(FIX_POSSESSIVE_SINGLE_QUOTE, "$1's") // eslint-disable-line quotes
-
-        .replace(HASH_ANS_CJK_HASH, "$1 $2$3$4 $5")
-        .replace(CJK_HASH, "$1 $2")
-        .replace(HASH_CJK, "$1 $3")
-
-        .replace(CJK_OPERATOR_ANS, "$1 $2 $3")
-        .replace(ANS_OPERATOR_CJK, "$1 $2 $3")
-
-        .replace(FIX_SLASH_AS, "$1$2")
-        .replace(FIX_SLASH_AS_SLASH, "$1$2$3")
-
-        .replace(CJK_LEFT_BRACKET, "$1 $2")
-        .replace(RIGHT_BRACKET_CJK, "$1 $2")
-        .replace(FIX_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1$2$3")
-        .replace(ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1 $2$3$4")
-        .replace(LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK, "$1$2$3 $4")
-
-        .replace(AN_LEFT_BRACKET, "$1 $2")
-        .replace(RIGHT_BRACKET_AN, "$1 $2")
-
-        .replace(CJK_ANS, "$1 $2")
-        .replace(ANS_CJK, "$1 $2")
-
-        .replace(S_A, "$1 $2")
-
-        .replace(MIDDLE_DOT, "・")
-
-    return newText
 }
+
+public fun String.spacingText(): String = Pangu.spacingText(this)
