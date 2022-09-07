@@ -1,103 +1,93 @@
 package dev.darkokoa.pangu
 
-/**
- *
- * CJK is an acronym for Chinese, Japanese, and Korean.
- * CJK includes the following Unicode blocks:
- * \u2E80-\u2EFF CJK Radicals Supplement
- * \u2F00-\u2FDF Kangxi Radicals
- * \u3040-\u309F Hiragana
- * \u30A0-\u30FF Katakana
- * \u3100-\u312F Bopomofo
- * \u3200-\u32FF Enclosed CJK Letters and Months
- * \u3400-\u4DBF CJK Unified Ideographs Extension A
- * \u4E00-\u9FFF CJK Unified Ideographs
- * \uF900-\uFAFF CJK Compatibility Ideographs
- *
- */
-private const val CJK_UNICODE =
-    "\u2E80-\u2EFF\u2F00-\u2FDF\u3040-\u309F\u30A0-\u30FA\u30FC-\u30FF\u3100-\u312F\u3200-\u32FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF"
+public object Pangu {
 
-private val ANY_CJK = Regex("[$CJK_UNICODE]")
+    /**
+     *
+     * CJK is an acronym for Chinese, Japanese, and Korean.
+     * CJK includes the following Unicode blocks:
+     * \u2E80-\u2EFF CJK Radicals Supplement
+     * \u2F00-\u2FDF Kangxi Radicals
+     * \u3040-\u309F Hiragana
+     * \u30A0-\u30FF Katakana
+     * \u3100-\u312F Bopomofo
+     * \u3200-\u32FF Enclosed CJK Letters and Months
+     * \u3400-\u4DBF CJK Unified Ideographs Extension A
+     * \u4E00-\u9FFF CJK Unified Ideographs
+     * \uF900-\uFAFF CJK Compatibility Ideographs
+     *
+     */
+    private const val CJK_UNICODE =
+        "\u2E80-\u2EFF\u2F00-\u2FDF\u3040-\u309F\u30A0-\u30FA\u30FC-\u30FF\u3100-\u312F\u3200-\u32FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF"
+    private val ANY_CJK = Regex("[$CJK_UNICODE]")
+    private val CJK = Regex("([$CJK_UNICODE])")
 
-private val CJK = Regex("([$CJK_UNICODE])")
+    private const val DOT = "\\."
+    private val CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS_CJK = Regex(CJK.pattern + " *(:+|$DOT) *" + CJK.pattern)
+    private val CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS = Regex(CJK.pattern + " *([~\\\\!;,?]+) *")
+    private val DOTS_CJK = Regex("(\\.{2,}|\u2026)" + CJK.pattern)
+    private val FIX_CJK_COLON_ANS = Regex(CJK.pattern + ":([A-Z0-9()])")
 
+    private val QUOTE = Regex("([`\"\u05f4])")
+    private val CJK_QUOTE = Regex(CJK.pattern + QUOTE.pattern)
+    private val QUOTE_CJK = Regex(QUOTE.pattern + CJK.pattern)
+    private val FIX_QUOTE_ANY_QUOTE = Regex("([`\"\u05f4]+) *(.+?) *([`\"\u05f4]+)")
 
-private const val DOT = "\\."
-private val CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS_CJK = Regex(CJK.pattern + " *(:+|$DOT) *" + CJK.pattern)
-private val CONVERT_TO_FULL_WIDTH_CJK_SYMBOLS = Regex(CJK.pattern + " *([~\\\\!;,?]+) *")
-private val DOTS_CJK = Regex("(\\.{2,}|\u2026)" + CJK.pattern)
-private val FIX_CJK_COLON_ANS = Regex(CJK.pattern + ":([A-Z0-9()])")
+    private val CJK_SINGLE_QUOTE_BUT_POSSESSIVE = Regex(CJK.pattern + "('[^s])")
+    private val SINGLE_QUOTE_CJK = Regex("(')" + CJK.pattern)
+    private val FIX_POSSESSIVE_SINGLE_QUOTE = Regex("([A-Za-z0-9$CJK_UNICODE])( )('s)")
 
+    private val HASH_ANS_CJK_HASH = Regex(CJK.pattern + "(#)" + "([$CJK_UNICODE]+)" + "(#)" + CJK.pattern)
+    private val CJK_HASH = Regex(CJK.pattern + "(#([^ ]))")
+    private val HASH_CJK = Regex("(([^ ])#)" + CJK.pattern)
 
-private val QUOTE = Regex("([`\"\u05f4])")
-private val CJK_QUOTE = Regex(CJK.pattern + QUOTE.pattern)
-private val QUOTE_CJK = Regex(QUOTE.pattern + CJK.pattern)
-private val FIX_QUOTE_ANY_QUOTE = Regex("([`\"\u05f4]+) *(.+?) *([`\"\u05f4]+)")
+    private val CJK_OPERATOR_ANS = Regex(CJK.pattern + "([+\\-*/=&|<>])([A-Za-z0-9])")
+    private val ANS_OPERATOR_CJK = Regex("([A-Za-z0-9])([+\\-*/=&|<>])" + CJK.pattern)
 
+    private val FIX_SLASH_AS = Regex("(/) ([a-z\\-_./]+)")
+    private val FIX_SLASH_AS_SLASH = Regex("([/.])([A-Za-z\\-_./]+) (/)")
 
-private val CJK_SINGLE_QUOTE_BUT_POSSESSIVE = Regex(CJK.pattern + "('[^s])")
-private val SINGLE_QUOTE_CJK = Regex("(')" + CJK.pattern)
-private val FIX_POSSESSIVE_SINGLE_QUOTE = Regex("([A-Za-z0-9$CJK_UNICODE])( )('s)")
+    private val CJK_LEFT_BRACKET = Regex(CJK.pattern + "([(\\[{<>\u201c])")
+    private val RIGHT_BRACKET_CJK = Regex("([)\\]}<>\u201d])" + CJK.pattern)
+    private val FIX_LEFT_BRACKET_ANY_RIGHT_BRACKET = Regex("([(\\[{<\u201c]+) *(.+?) *([)\\]}>\u201d]+)")
+    private val ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET =
+        Regex("([A-Za-z0-9$CJK_UNICODE]) *(\u201c)([A-Za-z0-9$CJK_UNICODE\\-_ ]+)(\u201d)")
+    private val LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK =
+        Regex("(\u201c)([A-Za-z0-9$CJK_UNICODE\\-_ ]+)(\u201d) *([A-Za-z0-9$CJK_UNICODE])")
 
+    private val AN_LEFT_BRACKET = Regex("([A-Za-z0-9])([(\\[{])")
+    private val RIGHT_BRACKET_AN = Regex("([)\\]}])([A-Za-z0-9])")
 
-private val HASH_ANS_CJK_HASH = Regex(CJK.pattern + "(#)" + "([$CJK_UNICODE]+)" + "(#)" + CJK.pattern)
-private val CJK_HASH = Regex(CJK.pattern + "(#([^ ]))")
-private val HASH_CJK = Regex("(([^ ])#)" + CJK.pattern)
+    private val CJK_ANS =
+        Regex(CJK.pattern + "([A-Za-z\u0370-\u03ff0-9@$%^&*\\-+\\\\=|/\u00a1-\u00ff\u2150-\u218f\u2700—\u27bf])")
+    private val ANS_CJK =
+        Regex("([A-Za-z\u0370-\u03ff0-9~$%^&*\\-+\\\\=|/!;:,.?\u00a1-\u00ff\u2150-\u218f\u2700—\u27bf])" + CJK.pattern)
 
-
-private val CJK_OPERATOR_ANS = Regex(CJK.pattern + "([+\\-*/=&|<>])([A-Za-z0-9])")
-private val ANS_OPERATOR_CJK = Regex("([A-Za-z0-9])([+\\-*/=&|<>])" + CJK.pattern)
-
-
-private val FIX_SLASH_AS = Regex("(/) ([a-z\\-_./]+)")
-private val FIX_SLASH_AS_SLASH = Regex("([/.])([A-Za-z\\-_./]+) (/)")
-
-
-private val CJK_LEFT_BRACKET = Regex(CJK.pattern + "([(\\[{<>\u201c])")
-private val RIGHT_BRACKET_CJK = Regex("([)\\]}<>\u201d])" + CJK.pattern)
-private val FIX_LEFT_BRACKET_ANY_RIGHT_BRACKET = Regex("([(\\[{<\u201c]+) *(.+?) *([)\\]}>\u201d]+)")
-private val ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET =
-    Regex("([A-Za-z0-9$CJK_UNICODE]) *(\u201c)([A-Za-z0-9$CJK_UNICODE\\-_ ]+)(\u201d)")
-private val LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK =
-    Regex("(\u201c)([A-Za-z0-9$CJK_UNICODE\\-_ ]+)(\u201d) *([A-Za-z0-9$CJK_UNICODE])")
-
-
-private val AN_LEFT_BRACKET = Regex("([A-Za-z0-9])([(\\[{])")
-private val RIGHT_BRACKET_AN = Regex("([)\\]}])([A-Za-z0-9])")
-
-
-private val CJK_ANS =
-    Regex(CJK.pattern + "([A-Za-z\u0370-\u03ff0-9@$%^&*\\-+\\\\=|/\u00a1-\u00ff\u2150-\u218f\u2700—\u27bf])")
-private val ANS_CJK =
-    Regex("([A-Za-z\u0370-\u03ff0-9~$%^&*\\-+\\\\=|/!;:,.?\u00a1-\u00ff\u2150-\u218f\u2700—\u27bf])" + CJK.pattern)
+    private val S_A = Regex("(%)([A-Za-z])")
+    private val MIDDLE_DOT = Regex("( *)([\u00b7\u2022\u2027])( *)")
 
 
-private val S_A = Regex("(%)([A-Za-z])")
-private val MIDDLE_DOT = Regex("( *)([\u00b7\u2022\u2027])( *)")
+    @Suppress("ObjectPropertyName")
+    private val _convertToFullWidthKVs = mapOf(
+        Regex(pattern = "~") to "～",
+        Regex(pattern = "!") to "！",
+        Regex(pattern = ";") to "；",
+        Regex(pattern = ":") to "：",
+        Regex(pattern = ",") to "，",
+        Regex(pattern = DOT) to "。",
+        Regex(pattern = "\\?") to "？",
+    )
 
 
-@Suppress("ObjectPropertyName")
-private val _convertToFullWidthKVs = mapOf(
-    Regex(pattern = "~") to "～",
-    Regex(pattern = "!") to "！",
-    Regex(pattern = ";") to "；",
-    Regex(pattern = ":") to "：",
-    Regex(pattern = ",") to "，",
-    Regex(pattern = DOT) to "。",
-    Regex(pattern = "\\?") to "？",
-)
+    private fun String.convertSomeSignsToFullWidth(): String {
+        var convertText = this
+        _convertToFullWidthKVs.forEach { (regex, text) ->
+            convertText = convertText.replace(regex, text)
+        }
 
-private fun String.convertSomeSignsToFullWidth(): String {
-    var convertText = this
-    _convertToFullWidthKVs.forEach { (regex, text) ->
-        convertText = convertText.replace(regex, text)
+        return convertText
     }
 
-    return convertText
-}
-
-public object Pangu {
     public fun spacingText(text: String): String {
         if (text.length <= 1 || !ANY_CJK.containsMatchIn(text)) return text
 
