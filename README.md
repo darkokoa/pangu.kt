@@ -65,7 +65,7 @@ String completedText = PanguKt.spacingText(pendingText);
 ```
 
 ## Matters Needing Attention
-1. When you need to process very long text, the processing time also be very long. This will block the current thread for a long time. If the UI thread is blocked it means the program may crash.
+1. The processing time also becomes longer when you need to process longer text. Doing so will block the current thread for a long time. If the UI thread is blocked it means that the program may crash.
 2. Java support requires Java 8 or above.
 
 ## License
