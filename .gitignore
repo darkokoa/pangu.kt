@@ -45,6 +45,9 @@
 # *.iml
 # *.ipr
 
+# Local Properties
+local.properties
+
 # CMake
 cmake-build-*/
 
