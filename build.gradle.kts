@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension
 
@@ -8,8 +7,6 @@ plugins {
     id("maven-publish")
     id("signing")
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-
-    id("com.prof18.kmp-framework-bundler") version "0.0.1"
 }
 
 plugins.withType<NodeJsRootPlugin> {
@@ -53,24 +50,13 @@ kotlin {
         }
     }
 
-    val xcfConfig = XCFramework(rootProject.name)
 
-    ios {
-        binaries.framework(rootProject.name, configure = xcfConfig::add)
-    }
-    watchos {
-        binaries.framework(rootProject.name, configure = xcfConfig::add)
-    }
-    tvos {
-        binaries.framework(rootProject.name, configure = xcfConfig::add)
-    }
+    ios()
+    watchos()
+    tvos()
 
-    macosX64 {
-        binaries.framework(rootProject.name, configure = xcfConfig::add)
-    }
-    macosArm64 {
-        binaries.framework(rootProject.name, configure = xcfConfig::add)
-    }
+    macosX64()
+    macosArm64()
 
     linuxX64()
     linuxArm64()
@@ -160,22 +146,5 @@ nexusPublishing {
             password.set(ossrhPassword)
             stagingProfileId.set(ossrhStagingProfileId)
         }
-    }
-}
-
-frameworkBundlerConfig {
-    frameworkName.set(rootProject.name)
-
-    outputPath.set("$rootDir")
-
-    versionName.set(findProperty("version") as String)
-    frameworkType = com.prof18.kmpframeworkbundler.data.FrameworkType.XC_FRAMEWORK
-
-    cocoaPodRepoInfo {
-        summary.set(findProperty("pomDescription") as String)
-        homepage.set(findProperty("pomUrl") as String)
-        license.set(findProperty("pomLicenseName") as String)
-        authors.set(findProperty("authors") as String)
-        gitUrl.set(findProperty("gitUrl") as String)
     }
 }
