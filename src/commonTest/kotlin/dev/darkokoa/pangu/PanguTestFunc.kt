@@ -1,4 +1,5 @@
-import dev.darkokoa.pangu.spacingText
+package dev.darkokoa.pangu
+
 import kotlin.test.assertEquals
 
 internal fun assertEqualsSpacingText(input: String, expected: String) {

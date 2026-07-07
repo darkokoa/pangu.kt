@@ -1,61 +1,67 @@
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
+import org.gradle.api.tasks.compile.JavaCompile
 
 plugins {
-    kotlin("multiplatform") version "1.7.10"
-
-    id("maven-publish")
-    id("signing")
-    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-}
-
-plugins.withType<NodeJsRootPlugin> {
-    configure<NodeJsRootExtension> {
-        nodeVersion = "16.13.1"
-    }
-}
-
-repositories {
-    mavenCentral()
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
+    alias(libs.plugins.maven.publish)
 }
 
 kotlin {
     explicitApi()
+    jvmToolchain(21)
 
     jvm {
-        compilations.all {
-            kotlinOptions.jvmTarget = "1.8"
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
         }
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
         }
     }
 
-    js(IR) {
-        browser {
-            testTask {
-                useKarma {
-                    useChrome()
-                    useFirefox()
-                }
-            }
+    android {
+        namespace = "dev.darkokoa.pangu"
+        compileSdk = 36
+        minSdk = 24
+
+        withJava()
+        withHostTestBuilder {}.configure {}
+
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
         }
+    }
+
+    js {
         nodejs {
             testTask {
                 useMocha {
-                    // Disable test case timeout, bringing parity with other platforms.
                     timeout = "0"
                 }
             }
         }
     }
 
+    wasmJs {
+        nodejs()
+    }
 
-    ios()
-    watchos()
-    tvos()
+    iosArm64()
+    iosSimulatorArm64()
+    iosX64()
 
-    macosX64()
+    watchosArm32()
+    watchosArm64()
+    watchosDeviceArm64()
+    watchosSimulatorArm64()
+
+    tvosArm64()
+    tvosSimulatorArm64()
+
     macosArm64()
 
     linuxX64()
@@ -63,88 +69,83 @@ kotlin {
 
     mingwX64()
 
+    @OptIn(ExperimentalAbiValidation::class)
+    abiValidation()
+
     sourceSets {
-        val commonTest by getting {
+        commonTest {
             dependencies {
                 implementation(kotlin("test"))
             }
         }
 
-        val jsTest by getting {
+        jvmTest {
             dependencies {
-                implementation(npm("karma-detect-browsers", "^2.0"))
+                implementation(kotlin("test-junit5"))
             }
         }
     }
 }
 
-val javadocJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-}
+mavenPublishing {
+    publishToMavenCentral(automaticRelease = true)
 
-publishing {
-    // Configure all publications.
-    publications.withType<MavenPublication> {
-        // Publish docs with each artifact.
-        artifact(javadocJar)
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) {
+        signAllPublications()
+    }
 
-        // Provide information requited by Maven Central.
-        pom {
-            name.set(rootProject.name)
-            description.set(findProperty("pomDescription") as String)
-            url.set(findProperty("pomUrl") as String)
+    coordinates(project.group.toString(), "pangu", project.version.toString())
 
-            licenses {
-                license {
-                    name.set(findProperty("pomLicenseName") as String)
-                    url.set(findProperty("pomLicenseUrl") as String)
-                }
+    pom {
+        name.set(rootProject.name)
+        description.set(providers.gradleProperty("pomDescription"))
+        inceptionYear.set("2024")
+        url.set(providers.gradleProperty("pomUrl"))
+
+        licenses {
+            license {
+                name.set(providers.gradleProperty("pomLicenseName"))
+                url.set(providers.gradleProperty("pomLicenseUrl"))
+                distribution.set("repo")
             }
+        }
 
-            scm {
-                url.set(findProperty("pomScmUrl") as String)
-                connection.set(findProperty("pomScmConnection") as String)
-                developerConnection.set(findProperty("pomScmDeveloperConnection") as String)
-            }
+        scm {
+            url.set(providers.gradleProperty("pomScmUrl"))
+            connection.set(providers.gradleProperty("pomScmConnection"))
+            developerConnection.set(providers.gradleProperty("pomScmDeveloperConnection"))
+        }
 
-            developers {
-                developer {
-                    id.set(findProperty("pomDeveloperId") as String)
-                    name.set(findProperty("pomDeveloperName") as String)
-                }
+        developers {
+            developer {
+                id.set(providers.gradleProperty("pomDeveloperId"))
+                name.set(providers.gradleProperty("pomDeveloperName"))
+                url.set(providers.gradleProperty("pomDeveloperUrl"))
             }
         }
     }
 }
 
-signing {
-    val signFileContents = File("${rootProject.projectDir}/secret/sign").readLines()
-
-    val signingKeyId = signFileContents.getOrNull(0)
-    val signingPassword = signFileContents.getOrNull(1)
-    val signingKeyBase64 = signFileContents.getOrNull(2)
-
-    if (signingKeyId != null && signingPassword != null) {
-        useInMemoryPgpKeys(signingKeyId, signingKeyBase64, signingPassword)
+tasks.withType<JavaCompile>().configureEach {
+    if (name.startsWith("compileJvm")) {
+        options.release.set(8)
     }
-
-    sign(publishing.publications)
 }
 
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+val hasXcodeBuild = providers.exec {
+    commandLine("xcrun", "xcodebuild", "-version")
+    isIgnoreExitValue = true
+}.result.map { it.exitValue == 0 }
 
-            val ossrhContents = File("${rootProject.projectDir}/secret/ossrh").readLines()
-            val ossrhUsername = ossrhContents.getOrNull(0)
-            val ossrhPassword = ossrhContents.getOrNull(1)
-            val ossrhStagingProfileId = ossrhContents.getOrNull(2)
+tasks.configureEach {
+    val appleTaskNameFragments = listOf("Ios", "ios", "Macos", "macos", "Tvos", "tvos", "Watchos", "watchos")
+    val isAppleNativeTestTask =
+        appleTaskNameFragments.any { name.contains(it) } &&
+            (name.startsWith("linkDebugTest") || name.endsWith("Test") || name.endsWith("TestBinaries"))
 
-            username.set(ossrhUsername)
-            password.set(ossrhPassword)
-            stagingProfileId.set(ossrhStagingProfileId)
+    if (isAppleNativeTestTask) {
+        onlyIf("requires full Xcode installation") {
+            hasXcodeBuild.get()
         }
     }
 }
