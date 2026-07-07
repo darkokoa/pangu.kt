@@ -1,0 +1,9 @@
+[versions]
+agp = "9.2.1"
+kotlin = "2.4.0"
+maven-publish = "0.36.0"
+
+[plugins]
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }

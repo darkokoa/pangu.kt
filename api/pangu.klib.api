@@ -1,0 +1,13 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, linuxArm64, linuxX64, macosArm64, mingwX64, tvosArm64, tvosSimulatorArm64, wasmJs, watchosArm32, watchosArm64, watchosDeviceArm64, watchosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.darkokoa:pangu>
+final object dev.darkokoa.pangu/Pangu { // dev.darkokoa.pangu/Pangu|null[0]
+    final fun spacingText(kotlin/String): kotlin/String // dev.darkokoa.pangu/Pangu.spacingText|spacingText(kotlin.String){}[0]
+}
+
+final fun (kotlin/String).dev.darkokoa.pangu/spacingText(): kotlin/String // dev.darkokoa.pangu/spacingText|spacingText@kotlin.String(){}[0]

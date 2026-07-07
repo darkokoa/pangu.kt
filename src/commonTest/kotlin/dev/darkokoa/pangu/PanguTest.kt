@@ -1,5 +1,7 @@
 @file:Suppress("TestFunctionName", "NonAsciiCharacters")
 
+package dev.darkokoa.pangu
+
 import kotlin.test.Test
 
 // tests from https://github.com/vinta/pangu.js/blob/master/test/shared/test_core.js

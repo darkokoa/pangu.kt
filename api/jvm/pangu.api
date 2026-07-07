@@ -1,0 +1,9 @@
+public final class dev/darkokoa/pangu/Pangu {
+	public static final field INSTANCE Ldev/darkokoa/pangu/Pangu;
+	public final fun spacingText (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class dev/darkokoa/pangu/PanguKt {
+	public static final fun spacingText (Ljava/lang/String;)Ljava/lang/String;
+}
+
