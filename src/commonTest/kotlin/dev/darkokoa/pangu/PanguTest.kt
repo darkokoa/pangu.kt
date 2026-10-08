@@ -409,6 +409,22 @@ class PanguTest {
     }
 
     @Test
+    fun handleMisusedRightQuotePairsAndDottedCalls() {
+        assertEqualsSpacingText("他说”你好”啊", "他说 ”你好” 啊")
+        assertEqualsSpacingText("中“文”x”y”", "中 “文” x ”y”")
+        assertEqualsSpacingText("中”a”中”b”", "中 ”a” 中 ”b”")
+        assertEqualsSpacingText("“文x”y”", "“文 x” y”")
+        assertEqualsSpacingText("“文\nx”y”", "“文\nx ”y”")
+        assertEqualsSpacingText("中foo(", "中 foo (")
+        assertEqualsSpacingText("中file.txt(", "中 file.txt(")
+        assertEqualsSpacingText("中obj.method(", "中 obj.method(")
+        assertEqualsSpacingText(
+            "后续会直接用iframe window.addEventListener('message')",
+            "后续会直接用 iframe window.addEventListener('message')",
+        )
+    }
+
+    @Test
     fun handleGraveAccentAround() { // \u0060
         assertEqualsSpacingText("前面`中間`後面", "前面 `中間` 後面")
     }

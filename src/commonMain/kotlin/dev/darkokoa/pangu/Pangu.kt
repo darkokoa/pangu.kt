@@ -22,9 +22,24 @@ public object Pangu {
     private const val AN = "A-Za-z0-9"
     private const val ASCII_WORD = "A-Za-z0-9_"
 
-    // Lookbehinds below are one character long. Android java.util.regex is ICU, and Java 8's
-    // regex engine rejects a lookbehind with no maximum length (* , + , or {n,}). Dotted calls
-    // and misused ”...” pairs are decided in code instead.
+    // Java and Kotlin/Native `\s` are [ \t\n\u000B\f\r]. Android ICU `\s` is Unicode whitespace,
+    // and Kotlin/JS (compiled with the u flag) also counts NBSP and ideographic space.
+    private const val ASCII_WHITESPACE = " \\t\\n\\u000B\\f\\r"
+
+    // Portable subset of Kotlin Regex. The same pattern must compile and match on JVM
+    // java.util.regex (including Java 8), Android ICU, JS and wasmJs (Kotlin sets the u flag),
+    // and Kotlin/Native.
+    // Allowed: literals, escapes (\n \r \t \f \uXXXX \xHH and escaped metacharacters), character
+    // classes, alternation, capturing groups, (?:) groups, greedy and reluctant quantifiers,
+    // and lookahead. [\s\S] is the any-character class, because each engine defines \S as the
+    // complement of \s. A lookbehind is a fixed-length run of literals and character classes:
+    // no quantifier, group, or alternation. Java 8 and Android ICU reject a lookbehind with no
+    // maximum length, and Kotlin/Native only steps a lookbehind by a fixed character count when
+    // the body is that kind of run.
+    // Not in the subset: \d \w \s \b and their complements, \p{} and \P{}, possessive quantifiers,
+    // atomic groups, inline flags, named groups, backreferences, \Q\E, class intersection (&&),
+    // and \h \v \R (Java's \v is a whitespace class; JS \v is only a vertical tab, and \h \R
+    // fail to compile under the u flag).
     private val ANY_CJK = Regex("[$CJK_UNICODE]")
     private val CJK = Regex("([$CJK_UNICODE])")
 
@@ -82,7 +97,8 @@ public object Pangu {
     // Full-width punctuation stays glued to a plus even when another plus on the line is a separator.
     private const val PLUS_FULLWIDTH =
         "\\uFF0C\\u3002\\uFF1B\\uFF1A\\uFF01\\uFF1F\\u3001\\uFF08\\uFF09\\u300C\\u300D\\u300E\\u300F\\u3010\\u3011\\u300A\\u300B"
-    private val PLUS_SEPARATOR = Regex("(?<=[^\\s+$PLUS_FULLWIDTH])\\+(?=[^\\s+$PLUS_FULLWIDTH])")
+    private val PLUS_SEPARATOR =
+        Regex("(?<=[^$ASCII_WHITESPACE+$PLUS_FULLWIDTH])\\+(?=[^$ASCII_WHITESPACE+$PLUS_FULLWIDTH])")
     private val RIGHT_BRACKET_PLUS_FULL_WIDTH_LEFT_BRACKET =
         Regex("(?<=[)\\]}])\\+(?=[\\uFF08\\u300C\\u300E\\u3010\\u300A])")
 
@@ -90,7 +106,8 @@ public object Pangu {
     private val HYPHEN_SEPARATOR = Regex("(?<=[)\\]}])-(?=[(\\[{])")
 
     private val PIPE_CJK_CONTACT = Regex("[$CJK_UNICODE]\\||\\|[$CJK_UNICODE]")
-    private val PIPE_SEPARATOR = Regex("([^\\s|])[ ]*(\\|+)[ ]*(?=[^\\s|])")
+    private val PIPE_SEPARATOR =
+        Regex("([^$ASCII_WHITESPACE|])[ ]*(\\|+)[ ]*(?=[^$ASCII_WHITESPACE|])")
 
     private const val FILE_PATH_DIRS =
         "home|root|usr|etc|var|opt|tmp|dev|mnt|proc|sys|bin|boot|lib|media|run|sbin|srv|node_modules|path|project|src|dist|test|tests|docs|templates|assets|public|static|config|scripts|tools|build|out|target|your|\\.claude|\\.git|\\.vscode"
@@ -106,17 +123,21 @@ public object Pangu {
 
     private val CJK_LEFT_BRACKET = Regex(CJK.pattern + "([(\\[{<>\u201c])")
     private val RIGHT_BRACKET_CJK = Regex("([)\\]}<>\u201d])" + CJK.pattern)
-    // Both quotes typed as ”. The unclosed-“ check that used to be an unbounded lookbehind is in code.
+    // Both quotes typed as ”. Space the outside only when no unclosed “ precedes the opener on
+    // this line. The opener's stretch must start at the beginning, a newline, or another ”, and
+    // must contain no “. That boundary is one character, so a fixed-length lookbehind can say it.
+    // An unbounded lookbehind cannot, and it would not compile on Java 8 or Android ICU.
     private val ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE = Regex(
-        "([$AN$CJK_UNICODE])[ ]*(\u201d)[ ]*([$AN$CJK_UNICODE\\-_ ]+?)[ ]*(\u201d)"
+        "(?<![^\\n\u201d])([^\\u201c\\u201d\\n]*)([$AN$CJK_UNICODE])[ ]*(\\u201d)[ ]*" +
+            "([$AN$CJK_UNICODE\\-_ ]+?)[ ]*(\\u201d)"
     )
     private val ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET =
         Regex("([$AN$CJK_UNICODE]) *(\u201c)([$AN$CJK_UNICODE\\-_ ]+)(\u201d)")
     private val LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK =
         Regex("(\u201c)([$AN$CJK_UNICODE\\-_ ]+)(\u201d) *([$AN$CJK_UNICODE])")
 
-    // A call on a dotted name keeps the parenthesis tight. The dot-plus-name check is in code.
-    private val AN_LEFT_BRACKET = Regex("([$AN])([(\\[{])")
+    // foo( is spaced; object.method( stays tight. The dot is the one character before the name.
+    private val AN_LEFT_BRACKET = Regex("(?<![$AN.])([$AN]+)([(\\[{])")
     private val RIGHT_BRACKET_AN = Regex("([)\\]}])([$AN])")
 
     private val ANGLE_BRACKET_PAIR = Regex("<([^<>]*)>")
@@ -144,7 +165,7 @@ public object Pangu {
 
     // Scheme-anchored. CJK inside the URL stays part of the URL. Trailing prose punctuation is trimmed back out.
     private val HTTP_URL_LEAD =
-        Regex("https?://[^\\s<>\"`\u3000-\u303F\uFF00-\uFFEF\u2018\u2019\u201C\u201D\u2026\uE000-\uF8FF]+")
+        Regex("https?://[^$ASCII_WHITESPACE<>\"`\u3000-\u303F\uFF00-\uFFEF\u2018\u2019\u201C\u201D\u2026\uE000-\uF8FF]+")
     private val HTTP_URL_TRAILING_PUNCTUATION = Regex("[.,;:!?'\"]+$")
 
 
@@ -225,16 +246,8 @@ public object Pangu {
             .replace(RIGHT_BRACKET_CJK, "$1 $2")
             .replace(ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1 $2$3$4")
             .replace(LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK, "$1$2$3 $4")
-
-        val quoted = spaceMisusedRightQuotePairs(newText)
-        newText = quoted
-            .replace(AN_LEFT_BRACKET) { match ->
-                if (isCallOnDottedName(quoted, match.range.last)) {
-                    match.value
-                } else {
-                    match.groupValues[1] + " " + match.groupValues[2]
-                }
-            }
+            .replace(ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE, "$1$2 $3$4$5")
+            .replace(AN_LEFT_BRACKET, "$1 $2")
             .replace(RIGHT_BRACKET_AN, "$1 $2")
 
             .replace(CJK_ANS, "$1 $2")
@@ -259,51 +272,6 @@ public object Pangu {
      * Returns true when [spacingText] would leave [text] unchanged.
      */
     public fun hasProperSpacing(text: String): Boolean = spacingText(text) == text
-
-    private fun spaceMisusedRightQuotePairs(text: String): String {
-        val out = StringBuilder()
-        var index = 0
-        while (index < text.length) {
-            val match = ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE.find(text, index) ?: break
-            // Group 1, then spaces, then the opening ”. The spaces are not a capture.
-            var openerIndex = match.range.first + match.groupValues[1].length
-            while (openerIndex < text.length && text[openerIndex] == ' ') openerIndex += 1
-            if (hasUnclosedLeftDoubleQuote(text, openerIndex)) {
-                // This start is not a ”...” pair. Resume one character later, as a failed lookbehind would.
-                val resume = match.range.first + 1
-                out.append(text, index, resume)
-                index = resume
-            } else {
-                out.append(text, index, match.range.first)
-                out.append(match.groupValues[1])
-                out.append(' ')
-                out.append(match.groupValues[2])
-                out.append(match.groupValues[3])
-                out.append(match.groupValues[4])
-                index = match.range.last + 1
-            }
-        }
-        out.append(text, index, text.length)
-        return out.toString()
-    }
-
-    private fun hasUnclosedLeftDoubleQuote(text: String, openerIndex: Int): Boolean {
-        var index = openerIndex - 1
-        while (index >= 0) {
-            when (text[index]) {
-                '\n', '\u201d' -> return false
-                '\u201c' -> return true
-                else -> index -= 1
-            }
-        }
-        return false
-    }
-
-    private fun isCallOnDottedName(text: String, bracketIndex: Int): Boolean {
-        var index = bracketIndex - 1
-        while (index >= 0 && text[index].isAsciiAlphanumeric()) index -= 1
-        return index >= 0 && text[index] == '.'
-    }
 
     private fun spacePluses(text: String): String {
         return mapLines(text) { line ->
@@ -426,7 +394,7 @@ public object Pangu {
             var chosenPrefix = startDelimiter
             while (guard.length <= 32) {
                 chosenPrefix = startDelimiter + guard
-                val probe = Regex(Regex.escape(chosenPrefix) + "\\d+" + Regex.escape(endDelimiter))
+                val probe = Regex(Regex.escape(chosenPrefix) + "[0-9]+" + Regex.escape(endDelimiter))
                 if (!probe.containsMatchIn(source)) break
                 guard += "\uE00C"
             }
@@ -442,7 +410,7 @@ public object Pangu {
 
         fun restore(text: String): String {
             if (items.isEmpty()) return text
-            val pattern = Regex(Regex.escape(prefix) + "(\\d+)" + Regex.escape(suffix))
+            val pattern = Regex(Regex.escape(prefix) + "([0-9]+)" + Regex.escape(suffix))
             return pattern.replace(text) { match ->
                 val index = match.groupValues[1].toIntOrNull()
                 if (index != null && index in items.indices) items[index] else match.value
