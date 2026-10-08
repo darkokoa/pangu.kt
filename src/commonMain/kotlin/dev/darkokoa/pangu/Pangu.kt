@@ -20,6 +20,7 @@ public object Pangu {
     private const val CJK_UNICODE =
         "\u2E80-\u2EFF\u2F00-\u2FDF\u3040-\u309F\u30A0-\u30FA\u30FC-\u30FF\u3100-\u312F\u3200-\u32FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF"
     private const val AN = "A-Za-z0-9"
+    private const val ASCII_WORD = "A-Za-z0-9_"
     private val ANY_CJK = Regex("[$CJK_UNICODE]")
     private val CJK = Regex("([$CJK_UNICODE])")
 
@@ -41,19 +42,51 @@ public object Pangu {
     private val QUOTE = Regex("([`\"\u05f4])")
     private val CJK_QUOTE = Regex(CJK.pattern + QUOTE.pattern)
     private val QUOTE_CJK = Regex(QUOTE.pattern + CJK.pattern)
-    private val FIX_QUOTE_ANY_QUOTE = Regex("([`\"\u05f4]+) *(.+?) *([`\"\u05f4]+)")
+    // [\s\S] pairs a quote across a newline. A dot would miss the closer and strip the space between two quotes.
+    private val FIX_QUOTE_ANY_QUOTE = Regex("([`\"\u05f4]+)[ ]*([\\s\\S]+?)[ ]*([`\"\u05f4]+)")
+    private val QUOTE_AN = Regex("(\u201d)([$AN])")
+    // CJK"AN closes a quoted CJK phrase, so the space goes after the quote.
+    private val CJK_QUOTE_AN = Regex("([$CJK_UNICODE])(\")([$AN])")
 
     private val CJK_SINGLE_QUOTE_BUT_POSSESSIVE = Regex(CJK.pattern + "('[^s])")
     private val SINGLE_QUOTE_CJK = Regex("(')" + CJK.pattern)
-    private val FIX_POSSESSIVE_SINGLE_QUOTE = Regex("([A-Za-z0-9$CJK_UNICODE])( )('s)")
+    private val FIX_POSSESSIVE_SINGLE_QUOTE = Regex("([$AN$CJK_UNICODE])( )('s)")
+    private val SINGLE_QUOTE_PURE_CJK = Regex("(')([$CJK_UNICODE]+)(')")
+    private val BACKTICK_PAIR = Regex("`([^`]+)`")
 
     private val HASH_ANS_CJK_HASH = Regex(CJK.pattern + "(#)" + "([$CJK_UNICODE]+)" + "(#)" + CJK.pattern)
     private val CJK_HASH = Regex(CJK.pattern + "(#([^ ]))")
     private val HASH_CJK = Regex("(([^ ])#)" + CJK.pattern)
 
-    // Slash is not an operator. It stays glued; file-path rules below insert spaces around a path as one unit.
-    private val CJK_OPERATOR_ANS = Regex(CJK.pattern + "([+\\-*=&|<>])([A-Za-z0-9])")
-    private val ANS_OPERATOR_CJK = Regex("([A-Za-z0-9])([+\\-*=&|<>])" + CJK.pattern)
+    // + and | are read per line. < and > are comparison operators. / is not an operator.
+    // A bracket counts as the half-width side: CJK-( and ]-CJK are operators. *[ stays a glob.
+    private const val OPERATORS = "*=&\\-"
+    private val CJK_OPERATOR_ANS = Regex("([$CJK_UNICODE])(?!\\*\\[)([$OPERATORS])([$AN(\\[{])")
+    private val ANS_OPERATOR_CJK = Regex("([$AN)\\]}])([$OPERATORS])([$CJK_UNICODE])")
+    private val CJK_LESS_THAN = Regex("([$CJK_UNICODE])(<)([$AN])")
+    private val LESS_THAN_CJK = Regex("([$AN])(<)([$CJK_UNICODE])")
+    private val CJK_GREATER_THAN = Regex("([$CJK_UNICODE])(>)([$AN])")
+    private val GREATER_THAN_CJK = Regex("([$AN])(>)([$CJK_UNICODE])")
+
+    // ASCII word edges, not Unicode \b, so a CJK neighbor still counts as a boundary.
+    private val SINGLE_LETTER_GRADE_CJK = Regex("(?<![$ASCII_WORD])([A-Za-z])([+\\-*])([$CJK_UNICODE])")
+    private val CJK_SIGN_DIGIT = Regex("([$CJK_UNICODE])(\\+)([0-9])")
+    private val CJK_HYPHEN_FLAG = Regex("([$CJK_UNICODE])(-)([a-z])(?![$ASCII_WORD])")
+    private val DIGIT_PLUS_CJK = Regex("(?<![$ASCII_WORD])([0-9]+)(\\+)([$CJK_UNICODE])")
+
+    private val PLUS_CJK_CONTACT = Regex("[$CJK_UNICODE]\\+|\\+[$CJK_UNICODE]")
+    // Full-width punctuation stays glued to a plus even when another plus on the line is a separator.
+    private const val PLUS_FULLWIDTH =
+        "\\uFF0C\\u3002\\uFF1B\\uFF1A\\uFF01\\uFF1F\\u3001\\uFF08\\uFF09\\u300C\\u300D\\u300E\\u300F\\u3010\\u3011\\u300A\\u300B"
+    private val PLUS_SEPARATOR = Regex("(?<=[^\\s+$PLUS_FULLWIDTH])\\+(?=[^\\s+$PLUS_FULLWIDTH])")
+    private val RIGHT_BRACKET_PLUS_FULL_WIDTH_LEFT_BRACKET =
+        Regex("(?<=[)\\]}])\\+(?=[\\uFF08\\u300C\\u300E\\u3010\\u300A])")
+
+    private val HYPHEN_CJK_CONTACT = Regex("[$CJK_UNICODE]-|-[${CJK_UNICODE}]")
+    private val HYPHEN_SEPARATOR = Regex("(?<=[)\\]}])-(?=[(\\[{])")
+
+    private val PIPE_CJK_CONTACT = Regex("[$CJK_UNICODE]\\||\\|[$CJK_UNICODE]")
+    private val PIPE_SEPARATOR = Regex("([^\\s|])[ ]*(\\|+)[ ]*(?=[^\\s|])")
 
     private const val FILE_PATH_DIRS =
         "home|root|usr|etc|var|opt|tmp|dev|mnt|proc|sys|bin|boot|lib|media|run|sbin|srv|node_modules|path|project|src|dist|test|tests|docs|templates|assets|public|static|config|scripts|tools|build|out|target|your|\\.claude|\\.git|\\.vscode"
@@ -69,37 +102,61 @@ public object Pangu {
 
     private val CJK_LEFT_BRACKET = Regex(CJK.pattern + "([(\\[{<>\u201c])")
     private val RIGHT_BRACKET_CJK = Regex("([)\\]}<>\u201d])" + CJK.pattern)
-    private val FIX_LEFT_BRACKET_ANY_RIGHT_BRACKET = Regex("([(\\[{<\u201c]+) *(.+?) *([)\\]}>\u201d]+)")
+    // Both quotes typed as ”: space outside the pair, but only when no unclosed “ precedes the opener.
+    private val ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE = Regex(
+        "([$AN$CJK_UNICODE])[ ]*(?<!\u201c[^\u201c\u201d\\n]*)(\u201d)[ ]*([$AN$CJK_UNICODE\\-_ ]+?)[ ]*(\u201d)"
+    )
     private val ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET =
-        Regex("([A-Za-z0-9$CJK_UNICODE]) *(\u201c)([A-Za-z0-9$CJK_UNICODE\\-_ ]+)(\u201d)")
+        Regex("([$AN$CJK_UNICODE]) *(\u201c)([$AN$CJK_UNICODE\\-_ ]+)(\u201d)")
     private val LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK =
-        Regex("(\u201c)([A-Za-z0-9$CJK_UNICODE\\-_ ]+)(\u201d) *([A-Za-z0-9$CJK_UNICODE])")
+        Regex("(\u201c)([$AN$CJK_UNICODE\\-_ ]+)(\u201d) *([$AN$CJK_UNICODE])")
 
-    private val AN_LEFT_BRACKET = Regex("([A-Za-z0-9])([(\\[{])")
-    private val RIGHT_BRACKET_AN = Regex("([)\\]}])([A-Za-z0-9])")
+    // A call on a dotted name keeps the parenthesis tight: addEventListener(. The lookbehind is the dot plus the name.
+    private val AN_LEFT_BRACKET = Regex("([$AN])(?<!\\.[$AN]*)([(\\[{])")
+    private val RIGHT_BRACKET_AN = Regex("([)\\]}])([$AN])")
 
-    // Slash and the half-width punctuation owned by the rules above are absent here, so those symbols are not spaced twice.
-    private val CJK_ANS =
-        Regex(CJK.pattern + "([A-Za-z\u0370-\u03ff0-9@$%^&*\\-+\\\\=|\u00a1-\u00ff\u2150-\u218f\u2700—\u27bf])")
-    private val ANS_CJK =
-        Regex("([A-Za-z\u0370-\u03ff0-9$%^&*\\-+\\\\=|\u00a1-\u00ff\u2150-\u218f\u2700—\u27bf])" + CJK.pattern)
+    private val ANGLE_BRACKET_PAIR = Regex("<([^<>]*)>")
+    private val ROUND_BRACKET_PAIR = Regex("\\(([^()]*)\\)")
+    private val SQUARE_BRACKET_PAIR = Regex("\\[([^\\[\\]]*)\\]")
+    private val CURLY_BRACKET_PAIR = Regex("\\{([^{}]*)\\}")
+
+    // Superscripts stay attached on the left. ® ⁰¹²³⁴⁵⁶⁷⁸⁹ ⁱⁿ⁺⁻⁼⁾ ℠ ™. ⁽ is excluded on purpose.
+    private const val SUPERSCRIPT_SUFFIXES =
+        "\u00ae\u00b2\u00b3\u00b9\u2070\u2071\u2074-\u207c\u207e\u207f\u2120\u2122"
+    // Dingbats are the real range U+2700-U+27BF. An em dash (U+2014) must not sit in this class.
+    private const val ANS_CJK_AFTER =
+        "A-Za-z\u0370-\u03ff0-9@\$%^&*+=\\\\\u00a1-\u00ff\u2150-\u218f\u2700-\u27bf\u2100-\u214f-"
+    private const val ANS_BEFORE_CJK =
+        "A-Za-z\u0370-\u03ff0-9\$%^&*+=\\\\\u00a1-\u00ff\u2150-\u218f\u2700-\u27bf\u2100-\u214f" +
+            SUPERSCRIPT_SUFFIXES + "-"
+    private val CJK_ANS = Regex("([$CJK_UNICODE])(?![$SUPERSCRIPT_SUFFIXES])([$ANS_CJK_AFTER])")
+    private val ANS_CJK = Regex("([$ANS_BEFORE_CJK])([$CJK_UNICODE])")
 
     private val S_A = Regex("(%)([A-Za-z])")
-    private val MIDDLE_DOT = Regex("( *)([\u00b7\u2022\u2027])( *)")
+    private val COPYRIGHT_DIGIT = Regex("(\u00a9)([0-9])")
+    // A lone tight interpunct becomes ・. A spaced one, or a mask run such as ••••, stays as written.
+    private val MIDDLE_DOT =
+        Regex("(?<![ \u00a0\u00b7\u2022\u2027])[\u00b7\u2022\u2027](?![ \u00a0\u00b7\u2022\u2027])")
 
     // Scheme-anchored. CJK inside the URL stays part of the URL. Trailing prose punctuation is trimmed back out.
     private val HTTP_URL_LEAD =
         Regex("https?://[^\\s<>\"`\u3000-\u303F\uFF00-\uFFEF\u2018\u2019\u201C\u201D\u2026\uE000-\uF8FF]+")
     private val HTTP_URL_TRAILING_PUNCTUATION = Regex("[.,;:!?'\"]+$")
-    private val HTTP_URL_PLACEHOLDER = Regex("\uE00A(\\d+)\uE00B")
-    private val CJK_BEFORE_URL_PLACEHOLDER = Regex("([$CJK_UNICODE])\uE00A")
 
 
     public fun spacingText(text: String): String {
         if (text.length <= 1 || !ANY_CJK.containsMatchIn(text)) return text
 
-        val (maskedText, urls) = maskHttpUrls(text)
-        var newText = maskedText
+        val backtickManager = PlaceholderReplacer(text, "\uE000", "\uE001")
+        var newText = BACKTICK_PAIR.replace(text) { match ->
+            "`" + backtickManager.store(match.groupValues[1]) + "`"
+        }
+
+        val urlManager = PlaceholderReplacer(newText, "\uE00A", "\uE00B")
+        newText = maskHttpUrls(newText, urlManager)
+
+        // Convert before the ANS rules, which would otherwise space a tight interpunct.
+        newText = newText.replace(MIDDLE_DOT, "・")
 
         newText = newText
             .replace(DOTS_CJK, "$1 $2")
@@ -115,28 +172,56 @@ public object Pangu {
             .replace(CJK_QUOTE, "$1 $2")
             .replace(QUOTE_CJK, "$1 $2")
             .replace(FIX_QUOTE_ANY_QUOTE, "$1$2$3")
+            .replace(QUOTE_AN, "$1 $2")
+            .replace(CJK_QUOTE_AN, "$1$2 $3")
 
+            .replace(FIX_POSSESSIVE_SINGLE_QUOTE, "$1's")
+
+        val singleQuoteCjkManager = PlaceholderReplacer(newText, "\uE006", "\uE007")
+        newText = SINGLE_QUOTE_PURE_CJK.replace(newText) { match ->
+            singleQuoteCjkManager.store(match.value)
+        }
+        newText = newText
             .replace(CJK_SINGLE_QUOTE_BUT_POSSESSIVE, "$1 $2")
             .replace(SINGLE_QUOTE_CJK, "$1 $2")
-            .replace(FIX_POSSESSIVE_SINGLE_QUOTE, "$1's") // eslint-disable-line quotes
+        newText = singleQuoteCjkManager.restore(newText)
 
+        newText = newText
             .replace(HASH_ANS_CJK_HASH, "$1 $2$3$4 $5")
             .replace(CJK_HASH, "$1 $2")
             .replace(HASH_CJK, "$1 $3")
 
+            .replace(SINGLE_LETTER_GRADE_CJK, "$1$2 $3")
+            .replace(CJK_SIGN_DIGIT, "$1 $2$3")
+            .replace(CJK_HYPHEN_FLAG, "$1 $2$3")
+            .replace(DIGIT_PLUS_CJK, "$1$2 $3")
+
+        newText = spacePluses(newText)
+        newText = spaceHyphens(newText)
+
+        newText = newText
             .replace(CJK_OPERATOR_ANS, "$1 $2 $3")
             .replace(ANS_OPERATOR_CJK, "$1 $2 $3")
+            .replace(CJK_LESS_THAN, "$1 $2 $3")
+            .replace(LESS_THAN_CJK, "$1 $2 $3")
+            .replace(CJK_GREATER_THAN, "$1 $2 $3")
+            .replace(GREATER_THAN_CJK, "$1 $2 $3")
 
             .replace(CJK_UNIX_ABSOLUTE_FILE_PATH, "$1 $2")
             .replace(CJK_UNIX_RELATIVE_FILE_PATH, "$1 $2")
             .replace(UNIX_ABSOLUTE_FILE_PATH_SLASH_CJK, "$1 $2")
             .replace(UNIX_RELATIVE_FILE_PATH_SLASH_CJK, "$1 $2")
 
+        newText = spacePipes(newText)
+        // A separator space can land just inside a closing quote. Strip it in this same pass.
+        newText = newText.replace(FIX_QUOTE_ANY_QUOTE, "$1$2$3")
+
+        newText = newText
             .replace(CJK_LEFT_BRACKET, "$1 $2")
             .replace(RIGHT_BRACKET_CJK, "$1 $2")
-            .replace(FIX_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1$2$3")
             .replace(ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1 $2$3$4")
             .replace(LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK, "$1$2$3 $4")
+            .replace(ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE, "$1 $2$3$4")
 
             .replace(AN_LEFT_BRACKET, "$1 $2")
             .replace(RIGHT_BRACKET_AN, "$1 $2")
@@ -145,19 +230,83 @@ public object Pangu {
             .replace(ANS_CJK, "$1 $2")
 
             .replace(S_A, "$1 $2")
+            .replace(COPYRIGHT_DIGIT, "$1 $2")
 
-            .replace(MIDDLE_DOT, "・")
-            .replace(CJK_BEFORE_URL_PLACEHOLDER, "$1 \uE00A")
+        newText = fixBracketSpacing(newText)
 
-        return restoreHttpUrls(newText, urls)
+        if (urlManager.hasItems) {
+            val cjkBeforeUrl = Regex("([$CJK_UNICODE])" + Regex.escape(urlManager.prefix))
+            newText = newText.replace(cjkBeforeUrl) { match ->
+                match.groupValues[1] + " " + urlManager.prefix
+            }
+        }
+        newText = urlManager.restore(newText)
+        return backtickManager.restore(newText)
     }
 
-    private fun maskHttpUrls(text: String): Pair<String, List<String>> {
+    /**
+     * Returns true when [spacingText] would leave [text] unchanged.
+     */
+    public fun hasProperSpacing(text: String): Boolean = spacingText(text) == text
+
+    private fun spacePluses(text: String): String {
+        return mapLines(text) { line ->
+            val spaced = if (PLUS_CJK_CONTACT.containsMatchIn(line)) {
+                line.replace(PLUS_SEPARATOR, " + ")
+            } else {
+                line
+            }
+            spaced.replace(RIGHT_BRACKET_PLUS_FULL_WIDTH_LEFT_BRACKET, " +")
+        }
+    }
+
+    private fun spaceHyphens(text: String): String {
+        return mapLines(text) { line ->
+            if (HYPHEN_CJK_CONTACT.containsMatchIn(line)) {
+                line.replace(HYPHEN_SEPARATOR, " - ")
+            } else {
+                line
+            }
+        }
+    }
+
+    private fun spacePipes(text: String): String {
+        return mapLines(text) { line ->
+            if (PIPE_CJK_CONTACT.containsMatchIn(line)) {
+                line.replace(PIPE_SEPARATOR, "$1 $2 ")
+            } else {
+                line
+            }
+        }
+    }
+
+    private fun mapLines(text: String, transform: (String) -> String): String {
+        if (!text.contains('\n')) return transform(text)
+        return text.split('\n').joinToString("\n", transform = transform)
+    }
+
+    private fun fixBracketSpacing(text: String): String {
+        var current = text
+        val pairs = arrayOf(
+            ANGLE_BRACKET_PAIR to ('<' to '>'),
+            ROUND_BRACKET_PAIR to ('(' to ')'),
+            SQUARE_BRACKET_PAIR to ('[' to ']'),
+            CURLY_BRACKET_PAIR to ('{' to '}'),
+        )
+        for ((pattern, brackets) in pairs) {
+            val (open, close) = brackets
+            current = pattern.replace(current) { match ->
+                "$open${match.groupValues[1].trim(' ')}$close"
+            }
+        }
+        return current
+    }
+
+    private fun maskHttpUrls(text: String, urls: PlaceholderReplacer): String {
         if (!text.contains("http://") && !text.contains("https://")) {
-            return text to emptyList()
+            return text
         }
 
-        val urls = ArrayList<String>()
         val out = StringBuilder()
         var index = 0
         while (index < text.length) {
@@ -172,15 +321,14 @@ public object Pangu {
             out.append(text, index, start)
             val raw = match.value
             val url = trimHttpUrl(raw)
-            out.append('\uE00A').append(urls.size).append('\uE00B')
-            urls.add(url)
+            out.append(urls.store(url))
             if (url.length < raw.length) {
                 out.append(raw, url.length, raw.length)
             }
             index = match.range.last + 1
         }
         out.append(text, index, text.length)
-        return out.toString() to urls
+        return out.toString()
     }
 
     private fun trimHttpUrl(url: String): String {
@@ -200,14 +348,53 @@ public object Pangu {
         }
     }
 
-    private fun restoreHttpUrls(text: String, urls: List<String>): String {
-        if (urls.isEmpty()) return text
-        return HTTP_URL_PLACEHOLDER.replace(text) { match ->
-            urls[match.groupValues[1].toInt()]
+    private fun Char.isAsciiAlphanumeric(): Boolean = this in 'A'..'Z' || this in 'a'..'z' || this in '0'..'9'
+
+    /**
+     * Hides a span behind a private-use placeholder that is not already present in [source].
+     * Restore ignores an index this replacer did not store, so a pre-existing lookalike is left as written.
+     */
+    private class PlaceholderReplacer(
+        source: String,
+        startDelimiter: String,
+        endDelimiter: String,
+    ) {
+        private val items = ArrayList<String>()
+        val prefix: String
+        private val suffix: String
+
+        val hasItems: Boolean get() = items.isNotEmpty()
+
+        init {
+            var guard = ""
+            var chosenPrefix = startDelimiter
+            while (guard.length <= 32) {
+                chosenPrefix = startDelimiter + guard
+                val probe = Regex(Regex.escape(chosenPrefix) + "\\d+" + Regex.escape(endDelimiter))
+                if (!probe.containsMatchIn(source)) break
+                guard += "\uE00C"
+            }
+            prefix = chosenPrefix
+            suffix = endDelimiter
+        }
+
+        fun store(item: String): String {
+            val placeholder = prefix + items.size + suffix
+            items.add(item)
+            return placeholder
+        }
+
+        fun restore(text: String): String {
+            if (items.isEmpty()) return text
+            val pattern = Regex(Regex.escape(prefix) + "(\\d+)" + Regex.escape(suffix))
+            return pattern.replace(text) { match ->
+                val index = match.groupValues[1].toIntOrNull()
+                if (index != null && index in items.indices) items[index] else match.value
+            }
         }
     }
-
-    private fun Char.isAsciiAlphanumeric(): Boolean = this in 'A'..'Z' || this in 'a'..'z' || this in '0'..'9'
 }
 
 public fun String.spacingText(): String = Pangu.spacingText(this)
+
+public fun String.hasProperSpacing(): Boolean = Pangu.hasProperSpacing(this)

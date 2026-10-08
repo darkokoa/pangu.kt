@@ -7,7 +7,9 @@
 
 // Library unique name: <io.github.darkokoa:pangu>
 final object dev.darkokoa.pangu/Pangu { // dev.darkokoa.pangu/Pangu|null[0]
+    final fun hasProperSpacing(kotlin/String): kotlin/Boolean // dev.darkokoa.pangu/Pangu.hasProperSpacing|hasProperSpacing(kotlin.String){}[0]
     final fun spacingText(kotlin/String): kotlin/String // dev.darkokoa.pangu/Pangu.spacingText|spacingText(kotlin.String){}[0]
 }
 
+final fun (kotlin/String).dev.darkokoa.pangu/hasProperSpacing(): kotlin/Boolean // dev.darkokoa.pangu/hasProperSpacing|hasProperSpacing@kotlin.String(){}[0]
 final fun (kotlin/String).dev.darkokoa.pangu/spacingText(): kotlin/String // dev.darkokoa.pangu/spacingText|spacingText@kotlin.String(){}[0]
