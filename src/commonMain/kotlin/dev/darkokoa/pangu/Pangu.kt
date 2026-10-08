@@ -39,7 +39,7 @@ public object Pangu {
     // Not in the subset: \d \w \s \b and their complements, \p{} and \P{}, possessive quantifiers,
     // atomic groups, inline flags, named groups, backreferences, \Q\E, class intersection (&&),
     // and \h \v \R (Java's \v is a whitespace class; JS \v is only a vertical tab, and \h \R
-    // fail to compile under the u flag).
+    // fail to compile under the u flag). Placeholder marks are spelled \uXXXX, never a quoted run.
     private val ANY_CJK = Regex("[$CJK_UNICODE]")
     private val CJK = Regex("([$CJK_UNICODE])")
 
@@ -259,7 +259,7 @@ public object Pangu {
         newText = fixBracketSpacing(newText)
 
         if (urlManager.hasItems) {
-            val cjkBeforeUrl = Regex("([$CJK_UNICODE])" + Regex.escape(urlManager.prefix))
+            val cjkBeforeUrl = Regex("([$CJK_UNICODE])" + privateUseLiteral(urlManager.prefix))
             newText = newText.replace(cjkBeforeUrl) { match ->
                 match.groupValues[1] + " " + urlManager.prefix
             }
@@ -374,6 +374,15 @@ public object Pangu {
 
     private fun Char.isAsciiAlphanumeric(): Boolean = this in 'A'..'Z' || this in 'a'..'z' || this in '0'..'9'
 
+    // \uXXXX for each private-use mark. Those marks are not metacharacters, and a quoted
+    // \Q...\E run would leave the subset above.
+    private fun privateUseLiteral(text: String): String = buildString(text.length * 6) {
+        for (char in text) {
+            append("\\u")
+            append(char.code.toString(16).uppercase().padStart(4, '0'))
+        }
+    }
+
     /**
      * Hides a span behind a private-use placeholder that is not already present in [source].
      * Restore ignores an index this replacer did not store, so a pre-existing lookalike is left as written.
@@ -394,7 +403,7 @@ public object Pangu {
             var chosenPrefix = startDelimiter
             while (guard.length <= 32) {
                 chosenPrefix = startDelimiter + guard
-                val probe = Regex(Regex.escape(chosenPrefix) + "[0-9]+" + Regex.escape(endDelimiter))
+                val probe = Regex(privateUseLiteral(chosenPrefix) + "[0-9]+" + privateUseLiteral(endDelimiter))
                 if (!probe.containsMatchIn(source)) break
                 guard += "\uE00C"
             }
@@ -410,7 +419,7 @@ public object Pangu {
 
         fun restore(text: String): String {
             if (items.isEmpty()) return text
-            val pattern = Regex(Regex.escape(prefix) + "([0-9]+)" + Regex.escape(suffix))
+            val pattern = Regex(privateUseLiteral(prefix) + "([0-9]+)" + privateUseLiteral(suffix))
             return pattern.replace(text) { match ->
                 val index = match.groupValues[1].toIntOrNull()
                 if (index != null && index in items.indices) items[index] else match.value

@@ -44,6 +44,12 @@ class RegexPortabilityGuardTest {
     }
 
     @Test
+    fun placeholderMarksAreUnicodeEscapes() {
+        assertTrue(!panguSource().contains("Regex.escape"))
+        assertEquals(emptyList(), portableRegexViolations("\\uE00A\\uE00C[0-9]+\\uE00B"))
+    }
+
+    @Test
     fun detectorAcceptsThePortableSubset() {
         assertEquals(emptyList(), portableRegexViolations("(?<![A-Za-z0-9_])"))
         assertEquals(emptyList(), portableRegexViolations("(?<=[^ \\t+])"))
