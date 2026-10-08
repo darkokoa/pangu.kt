@@ -21,6 +21,10 @@ public object Pangu {
         "\u2E80-\u2EFF\u2F00-\u2FDF\u3040-\u309F\u30A0-\u30FA\u30FC-\u30FF\u3100-\u312F\u3200-\u32FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF"
     private const val AN = "A-Za-z0-9"
     private const val ASCII_WORD = "A-Za-z0-9_"
+
+    // Lookbehinds below are one character long. Android java.util.regex is ICU, and Java 8's
+    // regex engine rejects a lookbehind with no maximum length (* , + , or {n,}). Dotted calls
+    // and misused ”...” pairs are decided in code instead.
     private val ANY_CJK = Regex("[$CJK_UNICODE]")
     private val CJK = Regex("([$CJK_UNICODE])")
 
@@ -102,17 +106,17 @@ public object Pangu {
 
     private val CJK_LEFT_BRACKET = Regex(CJK.pattern + "([(\\[{<>\u201c])")
     private val RIGHT_BRACKET_CJK = Regex("([)\\]}<>\u201d])" + CJK.pattern)
-    // Both quotes typed as ”: space outside the pair, but only when no unclosed “ precedes the opener.
+    // Both quotes typed as ”. The unclosed-“ check that used to be an unbounded lookbehind is in code.
     private val ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE = Regex(
-        "([$AN$CJK_UNICODE])[ ]*(?<!\u201c[^\u201c\u201d\\n]*)(\u201d)[ ]*([$AN$CJK_UNICODE\\-_ ]+?)[ ]*(\u201d)"
+        "([$AN$CJK_UNICODE])[ ]*(\u201d)[ ]*([$AN$CJK_UNICODE\\-_ ]+?)[ ]*(\u201d)"
     )
     private val ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET =
         Regex("([$AN$CJK_UNICODE]) *(\u201c)([$AN$CJK_UNICODE\\-_ ]+)(\u201d)")
     private val LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK =
         Regex("(\u201c)([$AN$CJK_UNICODE\\-_ ]+)(\u201d) *([$AN$CJK_UNICODE])")
 
-    // A call on a dotted name keeps the parenthesis tight: addEventListener(. The lookbehind is the dot plus the name.
-    private val AN_LEFT_BRACKET = Regex("([$AN])(?<!\\.[$AN]*)([(\\[{])")
+    // A call on a dotted name keeps the parenthesis tight. The dot-plus-name check is in code.
+    private val AN_LEFT_BRACKET = Regex("([$AN])([(\\[{])")
     private val RIGHT_BRACKET_AN = Regex("([)\\]}])([$AN])")
 
     private val ANGLE_BRACKET_PAIR = Regex("<([^<>]*)>")
@@ -221,9 +225,16 @@ public object Pangu {
             .replace(RIGHT_BRACKET_CJK, "$1 $2")
             .replace(ANS_CJK_LEFT_BRACKET_ANY_RIGHT_BRACKET, "$1 $2$3$4")
             .replace(LEFT_BRACKET_ANY_RIGHT_BRACKET_ANS_CJK, "$1$2$3 $4")
-            .replace(ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE, "$1 $2$3$4")
 
-            .replace(AN_LEFT_BRACKET, "$1 $2")
+        val quoted = spaceMisusedRightQuotePairs(newText)
+        newText = quoted
+            .replace(AN_LEFT_BRACKET) { match ->
+                if (isCallOnDottedName(quoted, match.range.last)) {
+                    match.value
+                } else {
+                    match.groupValues[1] + " " + match.groupValues[2]
+                }
+            }
             .replace(RIGHT_BRACKET_AN, "$1 $2")
 
             .replace(CJK_ANS, "$1 $2")
@@ -248,6 +259,51 @@ public object Pangu {
      * Returns true when [spacingText] would leave [text] unchanged.
      */
     public fun hasProperSpacing(text: String): Boolean = spacingText(text) == text
+
+    private fun spaceMisusedRightQuotePairs(text: String): String {
+        val out = StringBuilder()
+        var index = 0
+        while (index < text.length) {
+            val match = ANS_CJK_RIGHT_QUOTE_ANY_RIGHT_QUOTE.find(text, index) ?: break
+            // Group 1, then spaces, then the opening ”. The spaces are not a capture.
+            var openerIndex = match.range.first + match.groupValues[1].length
+            while (openerIndex < text.length && text[openerIndex] == ' ') openerIndex += 1
+            if (hasUnclosedLeftDoubleQuote(text, openerIndex)) {
+                // This start is not a ”...” pair. Resume one character later, as a failed lookbehind would.
+                val resume = match.range.first + 1
+                out.append(text, index, resume)
+                index = resume
+            } else {
+                out.append(text, index, match.range.first)
+                out.append(match.groupValues[1])
+                out.append(' ')
+                out.append(match.groupValues[2])
+                out.append(match.groupValues[3])
+                out.append(match.groupValues[4])
+                index = match.range.last + 1
+            }
+        }
+        out.append(text, index, text.length)
+        return out.toString()
+    }
+
+    private fun hasUnclosedLeftDoubleQuote(text: String, openerIndex: Int): Boolean {
+        var index = openerIndex - 1
+        while (index >= 0) {
+            when (text[index]) {
+                '\n', '\u201d' -> return false
+                '\u201c' -> return true
+                else -> index -= 1
+            }
+        }
+        return false
+    }
+
+    private fun isCallOnDottedName(text: String, bracketIndex: Int): Boolean {
+        var index = bracketIndex - 1
+        while (index >= 0 && text[index].isAsciiAlphanumeric()) index -= 1
+        return index >= 0 && text[index] == '.'
+    }
 
     private fun spacePluses(text: String): String {
         return mapLines(text) { line ->

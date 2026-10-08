@@ -23,6 +23,7 @@ Breaking plain-text spacing changes since 0.2.0. `spacingText` now follows pangu
 ### API
 
 - `Pangu.hasProperSpacing` and `String.hasProperSpacing()` report whether `spacingText` would change the text. Both are callable from Java (`Pangu.INSTANCE.hasProperSpacing`, `PanguKt.hasProperSpacing`).
+- Dotted calls (`addEventListener(`) and misused `”...”` pairs are recognized in code. Every lookbehind is one character long, so the rules compile on Android's ICU regex engine and on Java 8.
 
 ### Not in this release
 
