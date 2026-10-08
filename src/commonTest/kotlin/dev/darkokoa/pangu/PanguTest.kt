@@ -199,12 +199,12 @@ class PanguTest {
 
     @Test
     fun handleSolidus() { // \u002F
-        assertEqualsSpacingText("前面/後面", "前面 / 後面")
+        assertEqualsSpacingText("前面/後面", "前面/後面")
         assertEqualsSpacingText("前面 / 後面", "前面 / 後面")
         assertEqualsSpacingText("Vinta/Mollie", "Vinta/Mollie")
-        assertEqualsSpacingText("Vinta/陳上進", "Vinta / 陳上進")
-        assertEqualsSpacingText("陳上進/Vinta", "陳上進 / Vinta")
-        assertEqualsSpacingText("Mollie/陳上進/Vinta", "Mollie / 陳上進 / Vinta")
+        assertEqualsSpacingText("Vinta/陳上進", "Vinta/陳上進")
+        assertEqualsSpacingText("陳上進/Vinta", "陳上進/Vinta")
+        assertEqualsSpacingText("Mollie/陳上進/Vinta", "Mollie/陳上進/Vinta")
         assertEqualsSpacingText("得到一個A/B的結果", "得到一個 A/B 的結果")
         assertEqualsSpacingText(
             "2016-12-26(奇幻电影节) / 2017-01-20(美国) / 詹姆斯麦卡沃伊",
@@ -270,66 +270,66 @@ class PanguTest {
 
     @Test
     fun handleTilde() { // \u007E
-        assertEqualsSpacingText("前面~後面", "前面～後面")
-        assertEqualsSpacingText("前面 ~ 後面", "前面～後面")
-        assertEqualsSpacingText("前面~ 後面", "前面～後面")
-        assertEqualsSpacingText("前面 ~後面", "前面～後面")
+        assertEqualsSpacingText("前面~後面", "前面~ 後面")
+        assertEqualsSpacingText("前面 ~ 後面", "前面 ~ 後面")
+        assertEqualsSpacingText("前面~ 後面", "前面~ 後面")
+        assertEqualsSpacingText("前面 ~後面", "前面 ~後面")
     }
 
     @Test
     fun handleExclamationMark() { // \u0021
-        assertEqualsSpacingText("前面!後面", "前面！後面")
-        assertEqualsSpacingText("前面 ! 後面", "前面！後面")
-        assertEqualsSpacingText("前面! 後面", "前面！後面")
-        assertEqualsSpacingText("前面 !後面", "前面！後面")
+        assertEqualsSpacingText("前面!後面", "前面! 後面")
+        assertEqualsSpacingText("前面 ! 後面", "前面 ! 後面")
+        assertEqualsSpacingText("前面! 後面", "前面! 後面")
+        assertEqualsSpacingText("前面 !後面", "前面 ! 後面")
     }
 
     @Test
     fun handleSemicolon() { // \u003B
-        assertEqualsSpacingText("前面;後面", "前面；後面")
-        assertEqualsSpacingText("前面 ; 後面", "前面；後面")
-        assertEqualsSpacingText("前面; 後面", "前面；後面")
-        assertEqualsSpacingText("前面 ;後面", "前面；後面")
+        assertEqualsSpacingText("前面;後面", "前面; 後面")
+        assertEqualsSpacingText("前面 ; 後面", "前面 ; 後面")
+        assertEqualsSpacingText("前面; 後面", "前面; 後面")
+        assertEqualsSpacingText("前面 ;後面", "前面 ; 後面")
     }
 
     @Test
     fun handleColon() { // \u003A
-        assertEqualsSpacingText("前面:後面", "前面：後面")
-        assertEqualsSpacingText("前面 : 後面", "前面：後面")
-        assertEqualsSpacingText("前面: 後面", "前面：後面")
-        assertEqualsSpacingText("前面 :後面", "前面：後面")
-        assertEqualsSpacingText("電話:123456789", "電話：123456789")
+        assertEqualsSpacingText("前面:後面", "前面: 後面")
+        assertEqualsSpacingText("前面 : 後面", "前面 : 後面")
+        assertEqualsSpacingText("前面: 後面", "前面: 後面")
+        assertEqualsSpacingText("前面 :後面", "前面 :後面")
+        assertEqualsSpacingText("電話:123456789", "電話: 123456789")
         assertEqualsSpacingText("前面:)後面", "前面：) 後面")
-        assertEqualsSpacingText("前面:I have no idea後面", "前面：I have no idea 後面")
+        assertEqualsSpacingText("前面:I have no idea後面", "前面: I have no idea 後面")
         assertEqualsSpacingText("前面: I have no idea後面", "前面: I have no idea 後面")
     }
 
     @Test
     fun handleComma() { // \u002C
-        assertEqualsSpacingText("前面,後面", "前面，後面")
-        assertEqualsSpacingText("前面 , 後面", "前面，後面")
-        assertEqualsSpacingText("前面, 後面", "前面，後面")
-        assertEqualsSpacingText("前面 ,後面", "前面，後面")
-        assertEqualsSpacingText("前面,", "前面，")
-        assertEqualsSpacingText("前面, ", "前面，")
+        assertEqualsSpacingText("前面,後面", "前面, 後面")
+        assertEqualsSpacingText("前面 , 後面", "前面 , 後面")
+        assertEqualsSpacingText("前面, 後面", "前面, 後面")
+        assertEqualsSpacingText("前面 ,後面", "前面 , 後面")
+        assertEqualsSpacingText("前面,", "前面,")
+        assertEqualsSpacingText("前面, ", "前面, ")
     }
 
     @Test
     fun handleSingleFullStop() { // \u002E
-        assertEqualsSpacingText("前面.後面", "前面。後面")
-        assertEqualsSpacingText("前面 . 後面", "前面。後面")
-        assertEqualsSpacingText("前面. 後面", "前面。後面")
-        assertEqualsSpacingText("前面 .後面", "前面。後面")
+        assertEqualsSpacingText("前面.後面", "前面. 後面")
+        assertEqualsSpacingText("前面 . 後面", "前面 . 後面")
+        assertEqualsSpacingText("前面. 後面", "前面. 後面")
+        assertEqualsSpacingText("前面 .後面", "前面 .後面")
         assertEqualsSpacingText("黑人問號.jpg 後面", "黑人問號.jpg 後面")
     }
 
     @Test
     fun handleQuestionMark() { // \u003F
-        assertEqualsSpacingText("前面?後面", "前面？後面")
-        assertEqualsSpacingText("前面 ? 後面", "前面？後面")
-        assertEqualsSpacingText("前面? 後面", "前面？後面")
-        assertEqualsSpacingText("前面 ?後面", "前面？後面")
-        assertEqualsSpacingText("所以，請問Jackey的鼻子有幾個?3.14個", "所以，請問 Jackey 的鼻子有幾個？3.14 個")
+        assertEqualsSpacingText("前面?後面", "前面? 後面")
+        assertEqualsSpacingText("前面 ? 後面", "前面 ? 後面")
+        assertEqualsSpacingText("前面? 後面", "前面? 後面")
+        assertEqualsSpacingText("前面 ?後面", "前面 ? 後面")
+        assertEqualsSpacingText("所以，請問Jackey的鼻子有幾個?3.14個", "所以，請問 Jackey 的鼻子有幾個? 3.14 個")
     }
 
     @Test
