@@ -25,6 +25,13 @@ Breaking plain-text spacing changes since 0.2.0. `spacingText` now follows pangu
 - `Pangu.hasProperSpacing` and `String.hasProperSpacing()` report whether `spacingText` would change the text. Both are callable from Java (`Pangu.INSTANCE.hasProperSpacing`, `PanguKt.hasProperSpacing`).
 - Dotted calls (`addEventListener(`) and misused `”...”` pairs are fixed-length lookbehinds. Patterns stay in the regex subset shared by Java 8, Android ICU, JS, and Kotlin/Native.
 
+### HTML tags and hashtags
+
+- A tag with an ASCII name and a closing `>` is masked before spacing and restored afterwards. Text between tags is spaced. Double-quoted attribute values are spaced (`<input value="測試123">` becomes `<input value="測試 123">`). The tag name and the attribute syntax stay as written. This is a text scan, not a DOM walk.
+- A void tag (`<br>`, `<hr>`, `<img>`, and the rest of the void set) stays tight against neighboring text, including `<br />`. A bare non-void tag with no matching closer (`<div>`, `<String>`, `<Spinner />`) is a mention: `在這裡插入一個<div>標籤` becomes `在這裡插入一個 <div> 標籤`. `<br/>` with no space before the slash is not a tag.
+- `<` and `>` that are not a tag stay brackets, so `前面<中文123漢字>後面` is still `前面 <中文 123 漢字> 後面` and an HTML comment keeps its brackets.
+- `#` treats a non-breaking space as a gap, so `台北\u00a0#中文` and `中文#\u00a0abc` stay as written. `/#tag` in a slash list stays tight. `C#` is unchanged.
+
 ### Not in this release
 
-HTML tag placeholders, product-name and rating suffix lists (`Disney+`, `公視+`, `AB+`), DOM traversal, and the CLI are unchanged from 0.2.0: they are still absent.
+Product-name and rating suffix lists (`Disney+`, `公視+`, `AB+`), DOM traversal, and the CLI are unchanged from 0.2.0: they are still absent.

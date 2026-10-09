@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 // Active plain-text cases from pangu.js v10.4.1 tests/shared for affixes, quotes,
 // backticks, dot-calls, interpuncts, dingbats, and letterlike symbols.
-// it.fails cases are omitted. Product-name suffix lists and HTML tags are not ported.
+// it.fails cases are omitted. Product-name suffix lists are not ported. HTML tags live in UpstreamHtmlTagHashtagTest.
 class UpstreamAffixQuoteSymbolTest {
 
     @Test

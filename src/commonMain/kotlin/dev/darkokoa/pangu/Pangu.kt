@@ -74,8 +74,24 @@ public object Pangu {
     private val BACKTICK_PAIR = Regex("`([^`]+)`")
 
     private val HASH_ANS_CJK_HASH = Regex(CJK.pattern + "(#)" + "([$CJK_UNICODE]+)" + "(#)" + CJK.pattern)
-    private val CJK_HASH = Regex(CJK.pattern + "(#([^ ]))")
-    private val HASH_CJK = Regex("(([^ ])#)" + CJK.pattern)
+    // A # glued to the next character is a hashtag. NBSP is a gap, the same as a space.
+    // /#tag in a slash list is a hashtag, not a C# shape, so / does not count as the left side.
+    private val CJK_HASH = Regex(CJK.pattern + "(#([^ \\u00a0]))")
+    private val HASH_CJK = Regex("(([^ \\u00a0/])#)" + CJK.pattern)
+
+    // Opening, closing, and self-closing tags with an ASCII name. Stray < > and comments are not tags.
+    // The self-closing slash counts only after whitespace, so <br/> stays ordinary text. <br> and <br /> do not.
+    // The attribute tail is one whitespace and then [^>]*. [ws]+ before [^>]* overlaps, so a <div
+    // plus a long space run and no > would retry every split of that run.
+    private val HTML_TAG = Regex("</?[A-Za-z][A-Za-z0-9]*(?:[$ASCII_WHITESPACE][^>]*)?>")
+    private val CLOSING_HTML_TAG = Regex("</([A-Za-z][A-Za-z0-9]*)")
+    private val BARE_HTML_TAG = Regex("^<([A-Za-z][A-Za-z0-9]*)[$ASCII_WHITESPACE]*/?>$")
+    // Double-quoted attributes only. A hyphenated name such as data-id is left as written.
+    private val HTML_ATTRIBUTE = Regex("([A-Za-z0-9_]+)=\"([^\"]*)\"")
+    private val VOID_HTML_TAGS = setOf(
+        "area", "base", "br", "col", "embed", "hr", "img", "input",
+        "link", "meta", "param", "source", "track", "wbr",
+    )
 
     // + and | are read per line. < and > are comparison operators. / is not an operator.
     // A bracket counts as the half-width side: CJK-( and ]-CJK are operators. *[ stays a glob.
@@ -180,6 +196,15 @@ public object Pangu {
         val urlManager = PlaceholderReplacer(newText, "\uE00A", "\uE00B")
         newText = maskHttpUrls(newText, urlManager)
 
+        // Hide tags before any bracket rule. A bare non-void tag with no closer is a mention
+        // (<div>, <String>, <Spinner />) and is spaced from CJK later. A void tag (<br>, <img>)
+        // and any tag that has a closer stay markup and come back tight against the text.
+        val mentionManager = if ('<' in newText) PlaceholderReplacer(newText, "\uE004", "\uE005") else null
+        val htmlTagManager = if (mentionManager != null) PlaceholderReplacer(newText, "\uE002", "\uE003") else null
+        if (mentionManager != null && htmlTagManager != null) {
+            newText = maskHtmlTags(newText, mentionManager, htmlTagManager)
+        }
+
         // Convert before the ANS rules, which would otherwise space a tight interpunct.
         newText = newText.replace(MIDDLE_DOT, "・")
 
@@ -258,6 +283,24 @@ public object Pangu {
 
         newText = fixBracketSpacing(newText)
 
+        if (mentionManager != null && mentionManager.hasItems) {
+            // Match the whole placeholder. A one-character check on the end mark would also
+            // space a private-use run that was already in the input.
+            val cjkBeforeMention = Regex("([$CJK_UNICODE])" + privateUseLiteral(mentionManager.prefix))
+            newText = newText.replace(cjkBeforeMention) { match ->
+                match.groupValues[1] + " " + mentionManager.prefix
+            }
+            val mentionBeforeCjk = Regex(
+                privateUseLiteral(mentionManager.prefix) + "[0-9]+" +
+                    privateUseLiteral(mentionManager.suffix) + "([$CJK_UNICODE])"
+            )
+            newText = newText.replace(mentionBeforeCjk) { match ->
+                match.value.dropLast(1) + " " + match.groupValues[1]
+            }
+        }
+        if (mentionManager != null) newText = mentionManager.restore(newText)
+        if (htmlTagManager != null) newText = htmlTagManager.restore(newText)
+
         if (urlManager.hasItems) {
             val cjkBeforeUrl = Regex("([$CJK_UNICODE])" + privateUseLiteral(urlManager.prefix))
             newText = newText.replace(cjkBeforeUrl) { match ->
@@ -324,6 +367,31 @@ public object Pangu {
             }
         }
         return current
+    }
+
+    private fun maskHtmlTags(
+        text: String,
+        mentions: PlaceholderReplacer,
+        tags: PlaceholderReplacer,
+    ): String {
+        val closedTagNames = HashSet<String>()
+        for (match in CLOSING_HTML_TAG.findAll(text)) {
+            closedTagNames.add(match.groupValues[1].lowercase())
+        }
+        return HTML_TAG.replace(text) { match ->
+            val whole = match.value
+            val bare = BARE_HTML_TAG.matchEntire(whole)
+            if (bare != null) {
+                val tagName = bare.groupValues[1].lowercase()
+                if (tagName !in VOID_HTML_TAGS && tagName !in closedTagNames) {
+                    return@replace mentions.store(whole)
+                }
+            }
+            val processed = HTML_ATTRIBUTE.replace(whole) { attr ->
+                attr.groupValues[1] + "=\"" + spacingText(attr.groupValues[2]) + "\""
+            }
+            tags.store(processed)
+        }
     }
 
     private fun maskHttpUrls(text: String, urls: PlaceholderReplacer): String {
@@ -394,7 +462,7 @@ public object Pangu {
     ) {
         private val items = ArrayList<String>()
         val prefix: String
-        private val suffix: String
+        val suffix: String
 
         val hasItems: Boolean get() = items.isNotEmpty()
 

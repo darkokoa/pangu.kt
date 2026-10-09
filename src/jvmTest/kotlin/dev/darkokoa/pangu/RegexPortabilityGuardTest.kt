@@ -19,6 +19,7 @@ class RegexPortabilityGuardTest {
         // Touch the object so every field initializer has run, including the dynamic patterns.
         Pangu.spacingText("前面 https://example.com/a 后面")
         Pangu.spacingText("前面`中間`後面")
+        Pangu.spacingText("<p>中文abc</p>在這裡插入一個<div>標籤")
         val patterns = Pangu::class.java.declaredFields.mapNotNull { field ->
             if (!Regex::class.java.isAssignableFrom(field.type)) return@mapNotNull null
             field.isAccessible = true
