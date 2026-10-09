@@ -81,7 +81,9 @@ public object Pangu {
 
     // Opening, closing, and self-closing tags with an ASCII name. Stray < > and comments are not tags.
     // The self-closing slash counts only after whitespace, so <br/> stays ordinary text. <br> and <br /> do not.
-    private val HTML_TAG = Regex("</?[A-Za-z][A-Za-z0-9]*(?:[$ASCII_WHITESPACE]+[^>]*)?>")
+    // The attribute tail is one whitespace and then [^>]*. [ws]+ before [^>]* overlaps, so a <div
+    // plus a long space run and no > would retry every split of that run.
+    private val HTML_TAG = Regex("</?[A-Za-z][A-Za-z0-9]*(?:[$ASCII_WHITESPACE][^>]*)?>")
     private val CLOSING_HTML_TAG = Regex("</([A-Za-z][A-Za-z0-9]*)")
     private val BARE_HTML_TAG = Regex("^<([A-Za-z][A-Za-z0-9]*)[$ASCII_WHITESPACE]*/?>$")
     // Double-quoted attributes only. A hyphenated name such as data-id is left as written.

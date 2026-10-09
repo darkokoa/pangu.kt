@@ -142,6 +142,13 @@ class UpstreamHtmlTagHashtagTest {
         val gaps = " ".repeat(4000)
         assertEquals("前文 < div${gaps}字", ("前文<div" + gaps + "字").spacingText())
 
+        // Many unclosed "<a " starts. Each fails at '>', and the tails must not be re-split.
+        val unclosedAnchors = "<a ".repeat(5000)
+        assertEquals(
+            "前面 < a " + "<a ".repeat(4999) + "字",
+            ("前面" + unclosedAnchors + "字").spacingText(),
+        )
+
         val tag = "<div class=\"字123\">字</div>"
         val many = tag.repeat(200)
         val spaced = ("前文" + many).spacingText()
