@@ -62,6 +62,8 @@ val pendingText = "中文abc"
 val completedText = Pangu.spacingText(pendingText)
 
 val completedWithExtension = pendingText.spacingText()
+
+val alreadySpaced = completedText.hasProperSpacing()
 ```
 
 Java:
@@ -74,6 +76,9 @@ String pendingText = "中文abc";
 String completedText = Pangu.INSTANCE.spacingText(pendingText);
 
 String completedWithStaticFunction = PanguKt.spacingText(pendingText);
+
+boolean alreadySpaced = Pangu.INSTANCE.hasProperSpacing(completedText);
+boolean alreadySpacedFromStatic = PanguKt.hasProperSpacing(completedText);
 ```
 
 ## Targets
@@ -92,6 +97,21 @@ The modern KMP build publishes:
 - `mingwX64`
 
 Deprecated Kotlin/Native targets `macosX64`, `watchosX64`, and `tvosX64` are no longer published.
+
+## Behavior
+
+`spacingText` follows the plain-text rules of [pangu.js](https://github.com/vinta/pangu.js) 10.4.1 for the cases below. `hasProperSpacing` is true when `spacingText` would return the same string.
+
+- Half-width `~ ! ; : , . ?` stays half-width. A space is added after it only when CJK, a letter, or a digit follows. A colon glued to a parenthesis is still converted to full-width (`前面:)後面` becomes `前面：) 後面`).
+- `http://` and `https://` URLs are kept intact, including percent-encoding and CJK inside the URL. A space is added on the CJK side.
+- `/` is not an operator. `前面/後面` stays tight. Recognized Unix paths such as `/home` and `./docs` are spaced as one unit.
+- `+`, `-`, and `|` are separators only when that symbol touches CJK on the line. Otherwise they stay joiners (`A+B`, `1-10`, `x|y`). Affixes stay attached: `+886`, `100+`, `A+`, `D-`, `-m`. `C++` stays intact.
+- A single tight interpunct (`·`, `•`, `‧`) becomes `・`. A spaced interpunct, or a mask such as `••••`, is left as written.
+- Letterlike symbols (℃、Ω、ℓ) and Dingbats (✂、✅) are spaced like other symbols. Superscripts, `™`, `℠`, and `®` stay attached on the left. `©` is spaced from a following year.
+- An em dash (`—`, U+2014) is not a symbol that gets spaces. `他說——不對` stays tight.
+- Text inside backticks is not spaced. Quotes may span a line. A straight single quote around only CJK stays tight (`'铁蕾'`). A call parenthesis after a dotted name stays tight (`addEventListener(`).
+
+Product-name suffix lists (`Disney+`, `公視+`, blood types, credit ratings) and HTML tag handling are not applied. Passing an HTML string through `spacingText` still treats `<` and `>` as brackets.
 
 ## Notes
 
