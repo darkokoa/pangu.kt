@@ -110,8 +110,10 @@ Deprecated Kotlin/Native targets `macosX64`, `watchosX64`, and `tvosX64` are no 
 - Letterlike symbols (℃、Ω、ℓ) and Dingbats (✂、✅) are spaced like other symbols. Superscripts, `™`, `℠`, and `®` stay attached on the left. `©` is spaced from a following year.
 - An em dash (`—`, U+2014) is not a symbol that gets spaces. `他說——不對` stays tight.
 - Text inside backticks is not spaced. Quotes may span a line. A straight single quote around only CJK stays tight (`'铁蕾'`). A call parenthesis after a dotted name stays tight (`addEventListener(`).
+- An HTML tag with an ASCII name and a closing `>` is left intact, including the tag name and attributes. Text between tags is spaced. A double-quoted attribute value is spaced (`value="測試123"` becomes `value="測試 123"`). A void tag such as `<br>`, `<hr>`, or `<img>` stays tight against neighboring CJK. A bare non-void tag with no closer (`<div>`, `<String>`, `<Spinner />`) is a mention and takes a space from adjacent CJK. `<` and `>` that are not a tag, including `<!-- -->`, stay brackets.
+- `#` followed by a space or a non-breaking space is not a hashtag. `/#tag` in a slash list stays tight. `C#` still takes a space before following CJK.
 
-Product-name suffix lists (`Disney+`, `公視+`, blood types, credit ratings) and HTML tag handling are not applied. Passing an HTML string through `spacingText` still treats `<` and `>` as brackets.
+Product-name suffix lists (`Disney+`, `公視+`, blood types, credit ratings) are not applied.
 
 ## Notes
 

@@ -3,7 +3,7 @@ package dev.darkokoa.pangu
 import kotlin.test.Test
 
 // Active plain-text cases from pangu.js v10.4.1 tests/shared for punctuation, URLs, and slashes.
-// it.fails cases, HTML-attribute cases, and slash lists that depend on deferred hashtag rules are omitted.
+// it.fails cases are omitted. HTML tags, hashtags, and the /#tag slash lists live in UpstreamHtmlTagHashtagTest.
 class UpstreamPunctuationUrlSlashTest {
 
     @Test
